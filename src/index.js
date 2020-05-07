@@ -37,6 +37,11 @@ if (argv.root) {
 
 app.get('*', (req, res) => {
     let dir = req.params[0];
+    if (dir === '/favicon.ico') {
+	// createFile('/mnt/c/dev/browser/src/favicon.ico', res);
+	return;
+    }
+
     createPage(dir, res);
 });
 
@@ -46,12 +51,13 @@ app.listen(port, () => {
 
 function createPage(dir, res) {
     let fullPath = createFullPath(dir);
-    console.log(`Displaying ${fullPath}`);
+    // console.log(`Displaying ${fullPath}`);
     if (fs.statSync(fullPath).isDirectory()) {
 	let files = fs.readdirSync(fullPath);
 	files.sort(fileSort.bind(null, fullPath));
 
 	let html = "<html><body>"
+	    + '<head><link rel="icon" href="favicon.ico" /></head>'
             + `<a href='..'>..</a><br />`
 	    + files.map(createLink.bind(null, fullPath, dir)).join('<br />')
 	    + "</body></html>";
