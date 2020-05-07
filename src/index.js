@@ -79,7 +79,7 @@ function fileSort(fullPath, lhs, rhs) {
     else if (!lhsfs.isDirectory() && rhsfs.isDirectory()) {
 	return 1;
     }
-    else return lhsf - rhsf;
+    else return lhs.localeCompare(rhs, undefined, {numeric: true});
 }
 
 function createLink(root, curr, path) {
