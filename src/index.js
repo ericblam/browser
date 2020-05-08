@@ -122,6 +122,9 @@ function createLink(root, curr, path) {
     let fullPath = pathLib.join(root, path);
     let stats = fs.statSync(fullPath);
     let relPath = pathLib.join(curr, path);
+    if (path.length > 40) {
+	path = path.substring(0,40) + "...";
+    }
     if (stats.isDirectory()) {
 	return `<img src="/assets/dir.jpg" style="width:15px" /> <a href="${relPath}/">${path}/</a>`;
     }
