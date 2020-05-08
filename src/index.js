@@ -69,7 +69,7 @@ function createRawPage(dir, req, res) {
 
 	let html = "<html><body>"
 	    + '<head><link rel="icon" href="favicon.ico" /></head>'
-	    + '<a href="./?gallery=true">View Gallery</a><br /><br />'
+	    + `<a href="./?gallery='true'">View Gallery</a><br /><br />`
             + `<img src="/assets/up.jpg" style="width:15px" /> <a href='..'>..</a><br /><br />`
 	    + files.map(createLink.bind(null, fullPath, dir)).join('<br />')
 	    + "</body></html>";
@@ -89,8 +89,8 @@ function createGalleryPage(dir, req, res) {
 
 	let html = "<html><body>"
 	    + '<head><link rel="icon" href="favicon.ico" /><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>'
-	    + '<a href="./?gallery=\"false\"">View List</a><br /><br />'
-            + `<a href='..'>..</a><br /><br />`
+	    + `<a href="./?gallery='false'">View List</a><br /><br />'`
+            + `<img src="/assets/up.jpg" style="width:15px" /> <a href="../?gallery='true'">..</a><br /><br />`
 	    + files.map(createImage.bind(null, fullPath, dir)).join('<br />')
 	    + "</body></html>";
 	res.send(html);
@@ -134,33 +134,43 @@ function createLink(root, curr, path) {
 
 function createImage(root, curr, path) {
     let fullPath = pathLib.join(root, path);
-    let stats = fs.statSync(fullPath);
+    let stats;
+    try {
+	stats = fs.statSync(fullPath);
+    }
+    catch (e) {
+	return '';
+    }
     let relPath = pathLib.join(curr, path);
     let shortPath = path;
     if (path.length > 40) {
 	shortPath = path.substring(0,40) + "...";
     }
     if (stats.isDirectory()) {
-	let dirStats = fs.readdirSync(fullPath);
-	dirStats.sort(fileSort.bind(null, fullPath));
-	let firstImage = null;
-	for (i = 0; i < dirStats.length; ++i) {
-	    if (isImage(dirStats[i])) {
-		firstImage = pathLib.join(relPath, dirStats[i]);
-		break;
+	let dirStats;
+	try {
+	    dirStats = fs.readdirSync(fullPath);
+	    dirStats.sort(fileSort.bind(null, fullPath));
+	    let firstImage = null;
+	    for (i = 0; i < dirStats.length; ++i) {
+		if (isImage(dirStats[i])) {
+		    firstImage = pathLib.join(relPath, dirStats[i]);
+		    break;
+		}
 	    }
+	    if (firstImage) {
+		return `<a href="${relPath}/?gallery='true'"><img src="${firstImage}?width=100" style="width:70px;"><br />${path}/</a><br />`;
+	    }
+	    return `<img src="/assets/dir.jpg" style="width:15px" /> <a href="${relPath}/?gallery='true'">${path}/</a>`;
 	}
-	if (firstImage) {
-	    return `<a href="${relPath}/"><img src="${firstImage}?width=100" style="width:70px;"><br />${path}/</a><br />`;
-	}
-	return `<img src="/assets/dir.jpg" style="width:15px" /> <a href="${relPath}/">${path}/</a>`;
+	catch(e) {}
     }
 
     if (isImage(path)) {
 	return `<a href="${relPath}"><img src="${relPath}?width=600" style="height=400px;max-width:400px;width:expression(this.width>400?100%:true);" alt="${shortPath}" /></a><br />`;
     }
     else {
-	return `<img src="/assets/file.jpg" style="width:15px" /> <a href="${relPath}/">${path}</a>`;
+	return `<img src="/assets/file.jpg" style="width:15px" /> <a href="${relPath}/?gallery='true'">${path}</a>`;
     }
 }
 
