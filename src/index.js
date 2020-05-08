@@ -6,7 +6,7 @@ const pathLib = require('path');
 const app = express();
 const port = 8000;
 
-const imageExts = ['png', 'jpg', 'gif', 'jpeg'];
+const imageExts = ['.png', '.jpg', '.gif', '.jpeg'];
 const mime = {
     html: 'text/html',
     txt: 'text/plain',
@@ -42,14 +42,19 @@ app.get('*', (req, res) => {
 	return;
     }
 
-    createPage(dir, res);
+    if (req.query.gallery) {
+	createGalleryPage(dir, res);
+	return;
+    }
+
+    createRawPage(dir, res);
 });
 
 app.listen(port, () => {
     console.log(`Server listening on port ${port}`);
 });
 
-function createPage(dir, res) {
+function createRawPage(dir, res) {
     let fullPath = createFullPath(dir);
     // console.log(`Displaying ${fullPath}`);
     if (fs.statSync(fullPath).isDirectory()) {
@@ -58,7 +63,8 @@ function createPage(dir, res) {
 
 	let html = "<html><body>"
 	    + '<head><link rel="icon" href="favicon.ico" /></head>'
-            + `<a href='..'>..</a><br />`
+	    + '<a href="./?gallery=true">View Gallery</a><br /><br />'
+            + `<a href='..'>..</a><br /><br />`
 	    + files.map(createLink.bind(null, fullPath, dir)).join('<br />')
 	    + "</body></html>";
 	res.send(html);
@@ -66,6 +72,27 @@ function createPage(dir, res) {
     else {
 	return createFile(fullPath, res);
     }
+}
+
+function createGalleryPage(dir, res) {
+    let fullPath = createFullPath(dir);
+    // console.log(`Displaying ${fullPath}`);
+    if (fs.statSync(fullPath).isDirectory()) {
+	let files = fs.readdirSync(fullPath);
+	files.sort(fileSort.bind(null, fullPath));
+
+	let html = "<html><body>"
+	    + '<head><link rel="icon" href="favicon.ico" /><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>'
+	    + '<a href="./?gallery=\"false\"">View List</a><br /><br />'
+            + `<a href='..'>..</a><br /><br />`
+	    + files.map(createImage.bind(null, fullPath, dir)).join('<br />')
+	    + "</body></html>";
+	res.send(html);
+    }
+    else {
+	return createFile(fullPath, res);
+    }
+
 }
 
 function fileSort(fullPath, lhs, rhs) {
@@ -90,6 +117,22 @@ function createLink(root, curr, path) {
 	return `<a href="${relPath}/">${path}/</a>`;
     }
     return `<a href="${relPath}">${path}</a>`;
+}
+
+function createImage(root, curr, path) {
+    let fullPath = pathLib.join(root, path);
+    let stats = fs.statSync(fullPath);
+    let relPath = pathLib.join(curr, path);
+    if (stats.isDirectory()) {
+	return `<a href="${relPath}/">${path}/</a>`;
+    }
+
+    if (imageExts.indexOf(pathLib.extname(path)) >= 0) {
+	return `<a href="${relPath}"><img src="${relPath}" style="height=600px;max-width:600px;width:expression(this.width>500?500:true);" /></a><br />`;
+    }
+    else {
+	return `<a href="${relPath}/">${path}</a>`;
+    }
 }
 
 function createFullPath(path) {
