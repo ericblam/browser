@@ -169,7 +169,7 @@ function createFullPath(path) {
 }
 
 function createFile(path, req, res) {
-    let type = mime[pathLib.extname(path).slice(1)] || 'text/plain';
+    let type = mime[pathLib.extname(path).slice(1).toLowerCase()] || 'text/plain';
     let s = fs.createReadStream(path);
 
     s.on('open', function () {
@@ -190,5 +190,5 @@ function createFile(path, req, res) {
 }
 
 function isImage(path) {
-    return imageExts.indexOf(pathLib.extname(path)) >= 0;
+    return imageExts.indexOf(pathLib.extname(path).toLowerCase()) >= 0;
 }
