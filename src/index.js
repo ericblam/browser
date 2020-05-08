@@ -152,7 +152,7 @@ function createImage(root, curr, path) {
     }
 
     if (imageExts.indexOf(pathLib.extname(path)) >= 0) {
-	return `<a href="${relPath}"><img src="${relPath}" style="height=600px;max-width:600px;width:expression(this.width>500?500:true);" /></a><br />`;
+	return `<a href="${relPath}"><img src="${relPath}" style="height=400px;max-width:400px;width:expression(this.width>400?100%:true);" /></a><br />`;
     }
     else {
 	return `<img src="/assets/file.jpg" style="width:15px" /> <a href="${relPath}/">${path}</a>`;
