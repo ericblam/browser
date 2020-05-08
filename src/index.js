@@ -2,6 +2,7 @@ const express = require('express');
 const yargs = require('yargs');
 const fs = require('fs');
 const pathLib = require('path');
+const sharp = require('sharp');
 
 const app = express();
 const port = 8000;
@@ -43,23 +44,23 @@ app.get('*', (req, res) => {
     }
 
     if (dir.startsWith('/assets')) {
-	createAsset(dir, res);
+	createAsset(dir, req, res);
 	return;
     }
     
     if (req.query.gallery) {
-	createGalleryPage(dir, res);
+	createGalleryPage(dir, req, res);
 	return;
     }
 
-    createRawPage(dir, res);
+    createRawPage(dir, req, res);
 });
 
 app.listen(port, () => {
     console.log(`Server listening on port ${port}`);
 });
 
-function createRawPage(dir, res) {
+function createRawPage(dir, req, res) {
     let fullPath = createFullPath(dir);
     // console.log(`Displaying ${fullPath}`);
     if (fs.statSync(fullPath).isDirectory()) {
@@ -75,11 +76,11 @@ function createRawPage(dir, res) {
 	res.send(html);
     }
     else {
-	return createFile(fullPath, res);
+	return createFile(fullPath, req, res);
     }
 }
 
-function createGalleryPage(dir, res) {
+function createGalleryPage(dir, req, res) {
     let fullPath = createFullPath(dir);
     // console.log(`Displaying ${fullPath}`);
     if (fs.statSync(fullPath).isDirectory()) {
@@ -95,13 +96,13 @@ function createGalleryPage(dir, res) {
 	res.send(html);
     }
     else {
-	return createFile(fullPath, res);
+	return createFile(fullPath, req, res);
     }
 }
 
-function createAsset(path, res) {
+function createAsset(path, req, res) {
     let fullpath = pathLib.join(__dirname, path);
-    createFile(fullpath, res);
+    createFile(fullpath, req, res);
 }
 
 function fileSort(fullPath, lhs, rhs) {
@@ -135,24 +136,28 @@ function createImage(root, curr, path) {
     let fullPath = pathLib.join(root, path);
     let stats = fs.statSync(fullPath);
     let relPath = pathLib.join(curr, path);
+    let shortPath = path;
+    if (path.length > 40) {
+	shortPath = path.substring(0,40) + "...";
+    }
     if (stats.isDirectory()) {
 	let dirStats = fs.readdirSync(fullPath);
 	dirStats.sort(fileSort.bind(null, fullPath));
 	let firstImage = null;
 	for (i = 0; i < dirStats.length; ++i) {
-	    if (imageExts.indexOf(pathLib.extname(dirStats[i])) >= 0) {
+	    if (isImage(dirStats[i])) {
 		firstImage = pathLib.join(relPath, dirStats[i]);
 		break;
 	    }
 	}
 	if (firstImage) {
-	    return `<a href="${relPath}/"><img src="${firstImage}" style="width:70px;"><br />${path}/</a><br />`;
+	    return `<a href="${relPath}/"><img src="${firstImage}?width=100" style="width:70px;"><br />${path}/</a><br />`;
 	}
 	return `<img src="/assets/dir.jpg" style="width:15px" /> <a href="${relPath}/">${path}/</a>`;
     }
 
-    if (imageExts.indexOf(pathLib.extname(path)) >= 0) {
-	return `<a href="${relPath}"><img src="${relPath}" style="height=400px;max-width:400px;width:expression(this.width>400?100%:true);" /></a><br />`;
+    if (isImage(path)) {
+	return `<a href="${relPath}"><img src="${relPath}?width=600" style="height=400px;max-width:400px;width:expression(this.width>400?100%:true);" alt="${shortPath}" /></a><br />`;
     }
     else {
 	return `<img src="/assets/file.jpg" style="width:15px" /> <a href="${relPath}/">${path}</a>`;
@@ -163,17 +168,27 @@ function createFullPath(path) {
     return pathLib.join(rootDir, path);
 }
 
-function createFile(path, res) {
+function createFile(path, req, res) {
     let type = mime[pathLib.extname(path).slice(1)] || 'text/plain';
     let s = fs.createReadStream(path);
 
     s.on('open', function () {
         res.set('Content-Type', type);
-        s.pipe(res);
+	if (isImage(path) && req && !isNaN(req.query.width)) {
+	    let transform = sharp();
+            s.pipe(transform.resize(parseInt(req.query.width), null)).pipe(res);
+	}
+	else {
+            s.pipe(res);
+	}
     });
     s.on('error', function (err) {
 	console.log(err);
         res.set('Content-Type', 'text/plain');
         res.status(404).end('Not found');
     });
+}
+
+function isImage(path) {
+    return imageExts.indexOf(pathLib.extname(path)) >= 0;
 }
