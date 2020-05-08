@@ -136,14 +136,26 @@ function createImage(root, curr, path) {
     let stats = fs.statSync(fullPath);
     let relPath = pathLib.join(curr, path);
     if (stats.isDirectory()) {
-	return `<a href="${relPath}/">${path}/</a>`;
+	let dirStats = fs.readdirSync(fullPath);
+	dirStats.sort(fileSort.bind(null, fullPath));
+	let firstImage = null;
+	for (i = 0; i < dirStats.length; ++i) {
+	    if (imageExts.indexOf(pathLib.extname(dirStats[i])) >= 0) {
+		firstImage = pathLib.join(relPath, dirStats[i]);
+		break;
+	    }
+	}
+	if (firstImage) {
+	    return `<a href="${relPath}/"><img src="${firstImage}" style="width:70px;"><br />${path}/</a><br />`;
+	}
+	return `<img src="/assets/dir.jpg" style="width:15px" /> <a href="${relPath}/">${path}/</a>`;
     }
 
     if (imageExts.indexOf(pathLib.extname(path)) >= 0) {
 	return `<a href="${relPath}"><img src="${relPath}" style="height=600px;max-width:600px;width:expression(this.width>500?500:true);" /></a><br />`;
     }
     else {
-	return `<a href="${relPath}/">${path}</a>`;
+	return `<img src="/assets/file.jpg" style="width:15px" /> <a href="${relPath}/">${path}</a>`;
     }
 }
 
