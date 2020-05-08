@@ -42,6 +42,11 @@ app.get('*', (req, res) => {
 	return;
     }
 
+    if (dir.startsWith('/assets')) {
+	createAsset(dir, res);
+	return;
+    }
+    
     if (req.query.gallery) {
 	createGalleryPage(dir, res);
 	return;
@@ -64,7 +69,7 @@ function createRawPage(dir, res) {
 	let html = "<html><body>"
 	    + '<head><link rel="icon" href="favicon.ico" /></head>'
 	    + '<a href="./?gallery=true">View Gallery</a><br /><br />'
-            + `<a href='..'>..</a><br /><br />`
+            + `<img src="/assets/up.jpg" style="width:15px" /> <a href='..'>..</a><br /><br />`
 	    + files.map(createLink.bind(null, fullPath, dir)).join('<br />')
 	    + "</body></html>";
 	res.send(html);
@@ -92,7 +97,11 @@ function createGalleryPage(dir, res) {
     else {
 	return createFile(fullPath, res);
     }
+}
 
+function createAsset(path, res) {
+    let fullpath = pathLib.join(__dirname, path);
+    createFile(fullpath, res);
 }
 
 function fileSort(fullPath, lhs, rhs) {
@@ -114,9 +123,9 @@ function createLink(root, curr, path) {
     let stats = fs.statSync(fullPath);
     let relPath = pathLib.join(curr, path);
     if (stats.isDirectory()) {
-	return `<a href="${relPath}/">${path}/</a>`;
+	return `<img src="/assets/dir.jpg" style="width:15px" /> <a href="${relPath}/">${path}/</a>`;
     }
-    return `<a href="${relPath}">${path}</a>`;
+    return `<img src="/assets/file.jpg" style="width:15px" /> <a href="${relPath}">${path}</a>`;
 }
 
 function createImage(root, curr, path) {
