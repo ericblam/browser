@@ -62,7 +62,6 @@ app.listen(port, () => {
 
 function createRawPage(dir, req, res) {
     let fullPath = createFullPath(dir);
-    // console.log(`Displaying ${fullPath}`);
     if (fs.statSync(fullPath).isDirectory()) {
 	let files = fs.readdirSync(fullPath);
 	files.sort(fileSort.bind(null, fullPath));
@@ -82,14 +81,28 @@ function createRawPage(dir, req, res) {
 
 function createGalleryPage(dir, req, res) {
     let fullPath = createFullPath(dir);
-    // console.log(`Displaying ${fullPath}`);
     if (fs.statSync(fullPath).isDirectory()) {
 	let files = fs.readdirSync(fullPath);
 	files.sort(fileSort.bind(null, fullPath));
 
+	if (req.query.shuffle) {
+	    let firstFile = 0;
+	    for (let i = 0; i < files.length; ++i) {
+		let partPath = pathLib.join(dir, files[i]);
+		if (!fs.statSync(createFullPath(partPath)).isDirectory()) {
+		    firstFile = i;
+		    break;
+		}
+	    }
+	    let dirFiles = files.slice(0, firstFile);
+	    let fileFiles = files.slice(firstFile);
+	    shuffle(fileFiles);
+	    files = dirFiles.concat(fileFiles);
+	}
 	let html = "<html><body>"
 	    + '<head><link rel="icon" href="favicon.ico" /><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>'
-	    + `<a href="./?gallery='false'">View List</a><br /><br />'`
+	    + `<a href="./?gallery='false'">View List</a><br /><br />`
+	    + `<a href="./?gallery='true'&shuffle='true'">Shuffle</a><br /><br />`
             + `<img src="/assets/up.jpg" style="width:15px" /> <a href="../?gallery='true'">..</a><br /><br />`
 	    + files.map(createImage.bind(null, fullPath, dir)).join('<br />')
 	    + "</body></html>";
@@ -201,4 +214,23 @@ function createFile(path, req, res) {
 
 function isImage(path) {
     return imageExts.indexOf(pathLib.extname(path).toLowerCase()) >= 0;
+}
+
+function shuffle(array) {
+  var currentIndex = array.length, temporaryValue, randomIndex;
+
+  // While there remain elements to shuffle...
+  while (0 !== currentIndex) {
+
+    // Pick a remaining element...
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex -= 1;
+
+    // And swap it with the current element.
+    temporaryValue = array[currentIndex];
+    array[currentIndex] = array[randomIndex];
+    array[randomIndex] = temporaryValue;
+  }
+
+  return array;
 }
