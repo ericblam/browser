@@ -17,6 +17,7 @@ const mime = {
     jpeg: 'image/jpeg',
     png: 'image/png',
     svg: 'image/svg+xml',
+    mp4: 'video/mp4',
     js: 'application/javascript'
 };
 
@@ -192,24 +193,50 @@ function createFullPath(path) {
 }
 
 function createFile(path, req, res) {
-    let type = mime[pathLib.extname(path).slice(1).toLowerCase()] || 'text/plain';
-    let s = fs.createReadStream(path);
+    let extension = pathLib.extname(path).slice(1).toLowerCase();
 
-    s.on('open', function () {
-        res.set('Content-Type', type);
-	if (isImage(path) && req && !isNaN(req.query.width)) {
-	    let transform = sharp();
-            s.pipe(transform.resize(parseInt(req.query.width), null)).pipe(res);
+    if (extension === 'mp4') {
+	let movie_mp4 = fs.readFileSync(path);
+	let total = movie_mp4.length;
+	let range = req.headers.range;
+	let positions;
+	if (!range) {
+	    positions = [0, 0];
 	}
 	else {
-            s.pipe(res);
+	    positions = range.replace(/bytes=/, "").split("-");
 	}
-    });
-    s.on('error', function (err) {
-	console.log(err);
-        res.set('Content-Type', 'text/plain');
-        res.status(404).end('Not found');
-    });
+	let start = parseInt(positions[0], 10);
+	let end = positions[1] ? parseInt(positions[1], 10) : total - 1;
+	let chunksize = (end - start) + 1;
+        res.writeHead(206, {
+	    "Content-Range": "bytes " + start + "-" + end + "/" + total,
+            "Accept-Ranges": "bytes",
+            "Content-Length": chunksize,
+            "Content-Type": "video/mp4"
+        });
+        res.end(movie_mp4.slice(start, end + 1), "binary");
+    }
+    else {
+	let type = mime[extension] || 'text/plain';
+	let s = fs.createReadStream(path);
+
+	s.on('open', function () {
+            res.set('Content-Type', type);
+	    if (isImage(path) && req && !isNaN(req.query.width)) {
+		let transform = sharp();
+		s.pipe(transform.resize(parseInt(req.query.width), null)).pipe(res);
+	    }
+	    else {
+		s.pipe(res);
+	    }
+	});
+	s.on('error', function (err) {
+	    console.log(err);
+            res.set('Content-Type', 'text/plain');
+            res.status(404).end('Not found');
+	});
+    }
 }
 
 function isImage(path) {
